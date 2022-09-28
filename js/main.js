@@ -130,30 +130,11 @@ Spider.prototype.die = function () {
 
 // ---------- GAME STATES -------------- //
 PlayState = {};
-
-// initialize
-PlayState.init = function () {
-  this.game.renderer.renderSession.roundPixels = true;
-  this.hasKey = false;
-
-  this.keys = this.game.input.keyboard.addKeys({
-    left: Phaser.KeyCode.LEFT,
-    right: Phaser.KeyCode.RIGHT,
-    up: Phaser.KeyCode.UP,
-  });
-
-  this.keys.up.onDown.add(function () {
-    let didJump = this.hero.jump();
-    if (didJump) {
-      this.sfx.jump.play();
-    }
-  }, this);
-
-  this.coinPickupCount = 0;
-};
+const LEVEL_COUNT = 2;
 
 // preload assets
 PlayState.preload = function () {
+  this.game.load.json('level:0', 'data/level00.json');
   this.game.load.json("level:1", "data/level01.json");
 
   this.game.load.image("background", "images/background.png");
@@ -181,10 +162,33 @@ PlayState.preload = function () {
   this.game.load.audio("sfx:door", "audio/door.wav");
 };
 
+// initialize
+PlayState.init = function (data) {
+  this.game.renderer.renderSession.roundPixels = true;
+  this.hasKey = false;
+
+  this.keys = this.game.input.keyboard.addKeys({
+    left: Phaser.KeyCode.LEFT,
+    right: Phaser.KeyCode.RIGHT,
+    up: Phaser.KeyCode.UP,
+  });
+
+  this.keys.up.onDown.add(function () {
+    let didJump = this.hero.jump();
+    if (didJump) {
+      this.sfx.jump.play();
+    }
+  }, this);
+
+  this.coinPickupCount = 0;
+
+  this.level = (data.level || 0) % LEVEL_COUNT;
+};
+
 // create entities and set up game
 PlayState.create = function () {
   this.game.add.image(0, 0, "background");
-  this._loadLevel(this.game.cache.getJSON("level:1"));
+  this._loadLevel(this.game.cache.getJSON(`level:${this.level}`));
   this._createHud();
   this.sfx = {
     jump: this.game.add.audio("sfx:jump"),
@@ -269,7 +273,7 @@ PlayState._onHeroVsEnemy = function (hero, enemy) {
   // spider kills hero
   else {
     this.sfx.stomp.play();
-    this.game.state.restart();
+    this.game.state.restart(true, false, {level: this.level});
   }
 };
 
@@ -283,7 +287,7 @@ PlayState._onHeroVsKey = function (hero, key) {
 // hero door overlap
 PlayState._onHeroVsDoor = function (hero, door) {
   this.sfx.door.play();
-  this.game.state.restart();
+  this.game.state.restart(true, false, { level: this.level + 1 });
 };
 
 // handle key controls
@@ -423,7 +427,7 @@ PlayState._createHud = function () {
 window.onload = function () {
   let game = new Phaser.Game(960, 600, Phaser.AUTO, "game");
   game.state.add("play", PlayState);
-  game.state.start("play");
+  game.state.start('play', true, false, {level: 0});
 
   // console.log(new Villain());
 };
